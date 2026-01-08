@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus - Tu banca segura</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <canvas id="waveCanvas"></canvas>
+    <div class="auth-container">
+        <div class="auth-wrapper">
+            <!-- LADO IZQUIERDO CON LOGO -->
+            <div class="auth-logo-side">
+                <div class="logo-container">
+                    <img src="img/logo.png" alt="Nexus - Tu banca segura" class="auth-logo">
+                </div>
+            </div>
+
+            <!-- LADO DERECHO CON FORMULARIO -->
+            <div class="auth-card">
+                <!-- Header -->
+                <div class="auth-header">
+                    <h1><i class="bi bi-wallet2"></i> Nexus</h1>
+                    <p>Plataforma de Dinero Electrónico</p>
+                </div>
+
+                <!-- Tabs -->
+                <div class="pestanas-autenticacion">
+                    <button class="pestana-autenticacion activa" data-pestana="ingreso">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar
+                    </button>
+                    <button class="pestana-autenticacion" data-pestana="registro">
+                        <i class="bi bi-person-plus me-2"></i>Registrarse
+                    </button>
+                </div>
+
+                <!-- LOGIN TAB -->
+                <div id="pestana-ingreso" class="contenido-pestana-autenticacion activa">
+                    <form id="formularioIngreso" onsubmit="event.preventDefault(); app.iniciarSesion();">
+                        <div class="mb-3">
+                            <label for="curpIngreso" class="form-label">CURP</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                                <input type="text" class="form-control" id="curpIngreso" placeholder="18 caracteres" 
+                                       pattern="[A-Z0-9]{18}" required>
+                            </div>
+                            <small class="form-text text-muted">Formato: ABCD123456HDFABC00</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contrasenaIngreso" class="form-label">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input type="password" class="form-control" id="contrasenaIngreso" placeholder="Ingrese su contraseña" 
+                                       minlength="6" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="app.alternarContrasena('contrasenaIngreso')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="errorIngreso" class="alert alert-danger d-none mb-3" role="alert">
+                            <i class="bi bi-exclamation-circle me-2"></i><span id="msgErrorIngreso"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                            <i class="bi bi-unlock me-2"></i>Ingresar
+                        </button>
+                    </form>
+
+                    
+                </div>
+
+                <!-- REGISTER TAB -->
+                <div id="pestana-registro" class="contenido-pestana-autenticacion d-none">
+                    <form id="formularioRegistro" onsubmit="event.preventDefault(); app.registrar();">
+                        <div class="mb-3">
+                            <label for="nombreRegistro" class="form-label">Nombre Completo</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" id="nombreRegistro" placeholder="Juan Pérez García" required>
+                            </div>
+                        </div>
+
+                    <div class="mb-3">
+                        <label for="curpRegistro" class="form-label">CURP</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                            <input type="text" class="form-control" id="curpRegistro" placeholder="18 caracteres" 
+                                   pattern="[A-Z0-9]{18}" required>
+                        </div>
+                        <small class="form-text text-muted">Formato: ABCD123456HDFABC00</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="emailRegistro" class="form-label">Correo Electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" id="emailRegistro" placeholder="correo@ejemplo.com" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contrasenaRegistro" class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="contrasenaRegistro" placeholder="Mínimo 6 caracteres" 
+                                   minlength="6" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="app.alternarContrasena('contrasenaRegistro')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contrasenaConfirmacion" class="form-label">Confirmar Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="contrasenaConfirmacion" placeholder="Repita la contraseña" 
+                                   minlength="6" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="app.alternarContrasena('contrasenaConfirmacion')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="errorRegistro" class="alert alert-danger d-none mb-3" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i><span id="msgErrorRegistro"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2">
+                        <i class="bi bi-person-plus me-2"></i>Crear Cuenta
+                    </button>
+                </form>
+
+                
+                
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script src="wave-effect.js"></script>
+    <script>
+        // Cambio de pestañas
+        document.querySelectorAll('.pestana-autenticacion').forEach(pestana => {
+            pestana.addEventListener('click', function() {
+                const nombrePestana = this.getAttribute('data-pestana');
+                
+                document.querySelectorAll('.pestana-autenticacion').forEach(p => p.classList.remove('activa'));
+                document.querySelectorAll('.contenido-pestana-autenticacion').forEach(c => c.classList.add('d-none'));
+                
+                this.classList.add('activa');
+                document.getElementById('pestana-' + nombrePestana).classList.remove('d-none');
+            });
+        });
+    </script>
+</body>
+</html>

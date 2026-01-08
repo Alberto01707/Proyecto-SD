@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Sistema Financiero</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="ejemplo.css">
+</head>
+<body>
+    <div class="card">
+        <h2>Monto Total en el Sistema</h2>
+        <div class="total-money" id="montoTotal">$0.00</div>
+    </div>
+
+    <div class="card">
+        <h2>Transacciones por Periodo</h2>
+        <canvas id="graficoTransacciones"></canvas>
+    </div>
+
+    <script>
+        // Conexión con el API para obtener los datos
+        const ctx = document.getElementById('graficoTransacciones').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['10:00', '11:00', '12:00', '13:00'], // Datos temporales
+                datasets: [{
+                    label: 'Número de Transacciones',
+                    data: [12, 19, 3, 5], // Datos del Backend
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            }
+        });
+
+        // Cargar monto total desde el backend
+        async function cargarMontoTotal() {
+            try {
+                // POR HACER: Conectar con el backend
+                // const response = await fetch('http://localhost:8080/api/admin/monto-total');
+                // const data = await response.json();
+                // document.getElementById('montoTotal').textContent = `$${data.monto.toFixed(2)}`;
+                
+                // Datos de ejemplo
+                document.getElementById('montoTotal').textContent = "$1,250,000.00";
+            } catch (error) {
+                console.error('Error al cargar monto total:', error);
+            }
+        }
+
+        // Cargar datos al iniciar
+        window.addEventListener('DOMContentLoaded', () => {
+            cargarMontoTotal();
+        });
+    </script>
+</body>
+</html>
