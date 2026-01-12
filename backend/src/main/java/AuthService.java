@@ -106,7 +106,7 @@ public class AuthService {
             pstmt.setString(1, curp);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                // En producción real usaríamos hash, aquí comparación directa por simplicidad del proyecto
+            
                 return rs.getString("password_hash").equals(password);
             }
         } catch (SQLException e) {
