@@ -3,300 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus - Tu banca segura</title>
+    <title>Nexus - Panel de Usuario</title>
+
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Estilos -->
     <link href="styles.css" rel="stylesheet">
 </head>
+
 <body class="bg-light">
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="bi bi-wallet2"></i> Nexus
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item me-3">
-                        <span class="navbar-text">
-                            <i class="bi bi-person-circle me-2"></i>
-                            <span id="saludoUsuario">Usuario</span>
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <button class="btn btn-outline-light btn-sm" onclick="app.cerrarSesion()">
-                            <i class="bi bi-box-arrow-right me-1"></i> Cerrar Sesión
-                        </button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+<!-- ================= NAVBAR ================= -->
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+            <i class="bi bi-wallet2 me-1"></i> Nexus
+        </a>
 
-    <div class="container-fluid py-4">
-        <!-- Saldo Principal -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="hero-card">
-                    <div class="hero-card-label">
-                        <i class="bi bi-shield-lock me-2"></i>Saldo Disponible
-                    </div>
-                    <div class="balance-display" id="saldoUsuario">$0.00</div>
-                    <div class="balance-description">
-                        <i class="bi bi-check-circle me-1"></i>Protegido por Nexus Security
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Métricas Rápidas -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-6 col-lg-3">
-                <div class="kpi-card kpi-primary">
-                    <div class="kpi-card-label">
-                        <i class="bi bi-arrow-down-circle me-2"></i>Total Depositado
-                    </div>
-                    <div class="kpi-card-value" id="totalDepositado">$0.00</div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="kpi-card kpi-warning">
-                    <div class="kpi-card-label">
-                        <i class="bi bi-arrow-up-circle me-2"></i>Total Retirado
-                    </div>
-                    <div class="kpi-card-value" id="totalRetirado">$0.00</div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="kpi-card kpi-success">
-                    <div class="kpi-card-label">
-                        <i class="bi bi-arrow-left-right me-2"></i>Transferencias
-                    </div>
-                    <div class="kpi-card-value" id="totalTransferido">$0.00</div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="kpi-card kpi-primary">
-                    <div class="kpi-card-label">
-                        <i class="bi bi-receipt me-2"></i>Operaciones
-                    </div>
-                    <div class="kpi-card-value" id="totalTransacciones">0</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            <!-- Panel de Operaciones -->
-            <div class="col-lg-5">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <i class="bi bi-arrow-left-right me-2"></i>Operaciones Rápidas
-                    </div>
-                    <div class="card-body">
-                        <!-- Tabs de operaciones -->
-                        <ul class="nav nav-pills nav-fill mb-4" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="btn-deposit" data-bs-toggle="pill" 
-                                        data-bs-target="#tab-deposit" type="button">
-                                    <i class="bi bi-arrow-down me-1"></i>Depositar
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="btn-withdraw" data-bs-toggle="pill" 
-                                        data-bs-target="#tab-withdraw" type="button">
-                                    <i class="bi bi-arrow-up me-1"></i>Retirar
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="btn-transfer" data-bs-toggle="pill" 
-                                        data-bs-target="#tab-transfer" type="button">
-                                    <i class="bi bi-arrow-left-right me-1"></i>Transferir
-                                </button>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content">
-                            <!-- DEPÓSITO -->
-                            <div class="tab-pane fade show active" id="tab-deposit" role="tabpanel">
-                                <form onsubmit="event.preventDefault(); app.gestionarTransaccion_Completa('DEPOSITO');">
-                                    <div class="mb-3">
-                                        <label class="form-label">Monto a Depositar</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">$</span>
-                                            <input type="number" class="form-control" id="montoDeposito" 
-                                                   min="1" step="0.01" placeholder="0.00" required>
-                                            <span class="input-group-text">MXN</span>
-                                        </div>
-                                    </div>
-                                    <small class="text-muted d-block mb-3">
-                                        <i class="bi bi-info-circle me-1"></i>Los depósitos se procesan inmediatamente
-                                    </small>
-                                    <button type="submit" class="btn btn-success w-100 py-2">
-                                        <i class="bi bi-check-circle me-2"></i>Confirmar Depósito
-                                    </button>
-                                </form>
-                            </div>
-
-                            <!-- RETIRO -->
-                            <div class="tab-pane fade" id="tab-withdraw" role="tabpanel">
-                                <form onsubmit="event.preventDefault(); app.gestionarTransaccion_Completa('RETIRO');">
-                                    <div class="mb-3">
-                                        <label class="form-label">Monto a Retirar</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">$</span>
-                                            <input type="number" class="form-control" id="montoRetiro" 
-                                                   min="1" step="0.01" placeholder="0.00" required>
-                                            <span class="input-group-text">MXN</span>
-                                        </div>
-                                    </div>
-                                    <div class="alert alert-info alert-sm mb-3">
-                                        <small>
-                                            <i class="bi bi-exclamation-circle me-1"></i>
-                                            Saldo disponible: <strong id="saldoDisponibleRetiro">$0.00</strong>
-                                        </small>
-                                    </div>
-                                    <button type="submit" class="btn btn-warning w-100 py-2">
-                                        <i class="bi bi-check-circle me-2"></i>Confirmar Retiro
-                                    </button>
-                                </form>
-                            </div>
-
-                            <!-- TRANSFERENCIA -->
-                            <div class="tab-pane fade" id="tab-transfer" role="tabpanel">
-                                <form onsubmit="event.preventDefault(); app.gestionarTransaccion_Completa('TRANSFERENCIA');">
-                                    <div class="mb-3">
-                                        <label class="form-label">CURP Destinatario</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                                            <input type="text" class="form-control" id="destinoTransferencia" 
-                                                   placeholder="ABCD123456HDFABC00" pattern="[A-Z0-9]{18}" required>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Monto a Transferir</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">$</span>
-                                            <input type="number" class="form-control" id="montoTransferencia" 
-                                                   min="1" step="0.01" placeholder="0.00" required>
-                                            <span class="input-group-text">MXN</span>
-                                        </div>
-                                    </div>
-                                    <div class="alert alert-info alert-sm mb-3">
-                                        <small>
-                                            <i class="bi bi-info-circle me-1"></i>
-                                            Comisión: <strong>0% (Sin costo)</strong>
-                                        </small>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100 py-2">
-                                        <i class="bi bi-check-circle me-2"></i>Enviar Fondos
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Historial de Transacciones -->
-            <div class="col-lg-7">
-                <div class="card h-100" id="historialCard">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-clock-history me-2"></i>Historial de Transacciones</span>
-                        <button class="btn btn-light btn-sm" onclick="app.cargarHistorialUsuario_Panel()">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                    </div>
-                    
-                    <!-- Filtros -->
-                    <div class="card-body pt-3 pb-0">
-                        <div class="row g-2 mb-3" id="filtrosHistorial">
-                            <div class="col-6">
-                                <select class="form-select form-select-sm" id="filtroTipo" onchange="app.aplicarFiltroHistorial()">
-                                    <option value="">Todos los tipos</option>
-                                    <option value="DEPOSITO">Depósitos</option>
-                                    <option value="RETIRO">Retiros</option>
-                                    <option value="TRANSFERENCIA">Transferencias</option>
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <select class="form-select form-select-sm" id="filtroEstado" onchange="app.aplicarFiltroHistorial()">
-                                    <option value="">Todos los estados</option>
-                                    <option value="COMPLETADA">Completadas</option>
-                                    <option value="PENDIENTE">Pendientes</option>
-                                    <option value="FALLIDA">Fallidas</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tabla de transacciones -->
-                    <div class="card-body p-0">
-                        <div id="listaTransacciones" class="transaction-list">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Confirmación -->
-    <div class="modal fade" id="modalConfirmacion" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Operación
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>¿Confirmas esta operación?</p>
-                    <div class="alert alert-info">
-                        <strong>Detalles:</strong>
-                        <div id="detallesConfirmacion"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="app.confirmarTransaccion()">
-                        <i class="bi bi-check-circle me-1"></i>Confirmar
+        <div class="collapse navbar-collapse justify-content-end">
+            <ul class="navbar-nav align-items-center">
+                <li class="nav-item me-3">
+                    <span class="navbar-text">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <span id="saludoUsuario">Usuario</span>
+                    </span>
+                </li>
+                <li class="nav-item">
+                    <button class="btn btn-outline-light btn-sm" onclick="app.cerrarSesion()">
+                        <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
                     </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ================= CONTENIDO ================= -->
+<div class="container-fluid py-4">
+
+    <!-- Saldo principal -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="hero-card">
+                <div class="hero-card-label">
+                    <i class="bi bi-shield-lock me-2"></i>Saldo disponible
+                </div>
+                <div class="balance-display" id="saldoUsuario">$0.00</div>
+                <div class="balance-description">
+                    <i class="bi bi-check-circle me-1"></i>Cuenta protegida
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Retroalimentación -->
-    <div class="modal fade" id="modalRetroalimentacion" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center py-5">
-                    <div id="iconoRetroalimentacion" class="feedback-icon mb-3"></div>
-                    <h5 id="tituloRetroalimentacion" class="fw-bold mb-2"></h5>
-                    <p id="mensajeRetroalimentacion" class="text-muted mb-4"></p>
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                        <i class="bi bi-check me-1"></i>Entendido
-                    </button>
+    <div class="row g-4">
+
+        <!-- ================= OPERACIONES ================= -->
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-arrow-left-right me-2"></i>Operaciones
+                </div>
+
+                <div class="card-body">
+
+                    <ul class="nav nav-pills nav-fill mb-4">
+                        <li class="nav-item">
+                            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-deposito">
+                                <i class="bi bi-arrow-down me-1"></i>Depósito
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-retiro">
+                                <i class="bi bi-arrow-up me-1"></i>Retiro
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-transferencia">
+                                <i class="bi bi-arrow-left-right me-1"></i>Transferencia
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+
+                        <!-- DEPÓSITO -->
+                        <div class="tab-pane fade show active" id="tab-deposito">
+                            <form onsubmit="event.preventDefault(); app.gestionarTransaccion_Completa('DEPOSITO');">
+                                <div class="mb-3">
+                                    <label class="form-label">Monto</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" id="montoDeposito" class="form-control"
+                                               min="1" step="0.01" required>
+                                        <span class="input-group-text">MXN</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-success w-100">
+                                    <i class="bi bi-check-circle me-1"></i>Confirmar depósito
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- RETIRO -->
+                        <div class="tab-pane fade" id="tab-retiro">
+                            <form onsubmit="event.preventDefault(); app.gestionarTransaccion_Completa('RETIRO');">
+                                <div class="mb-3">
+                                    <label class="form-label">Monto</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" id="montoRetiro" class="form-control"
+                                               min="1" step="0.01" required>
+                                        <span class="input-group-text">MXN</span>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info py-2">
+                                    Saldo disponible: <strong id="saldoDisponibleRetiro">$0.00</strong>
+                                </div>
+
+                                <button class="btn btn-warning w-100">
+                                    <i class="bi bi-check-circle me-1"></i>Confirmar retiro
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- TRANSFERENCIA -->
+                        <div class="tab-pane fade" id="tab-transferencia">
+                            <form onsubmit="event.preventDefault(); app.gestionarTransaccion_Completa('TRANSFERENCIA');">
+                                <div class="mb-3">
+                                    <label class="form-label">CURP destino</label>
+                                    <input type="text" id="destinoTransferencia"
+                                           class="form-control text-uppercase"
+                                           pattern="[A-Z0-9]{18}" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Monto</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" id="montoTransferencia" class="form-control"
+                                               min="1" step="0.01" required>
+                                        <span class="input-group-text">MXN</span>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary w-100">
+                                    <i class="bi bi-check-circle me-1"></i>Enviar transferencia
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js"></script>
-    <script src="realizarTransferencia.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('jwt_token');
-            if (!token) window.location.href = 'login.html';
-            app.cargarDatosUsuario_Panel();
-        });
-    </script>
+        <!-- ================= HISTORIAL ================= -->
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-clock-history me-2"></i>Historial
+                </div>
+
+                <div class="card-body">
+                    <div id="listaTransacciones" class="text-center text-muted py-5">
+                        <i class="bi bi-cloud-check fs-2"></i>
+                        <p class="mt-2">
+                            Las transacciones se procesan de forma asíncrona
+                            mediante Google Pub/Sub.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================= MODAL FEEDBACK ================= -->
+<div class="modal fade" id="modalRetroalimentacion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div id="iconoRetroalimentacion" class="mb-3 display-4"></div>
+                <h5 id="tituloRetroalimentacion" class="fw-bold"></h5>
+                <p id="mensajeRetroalimentacion" class="text-muted mb-4"></p>
+                <button class="btn btn-primary" data-bs-dismiss="modal">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('jwt_token');
+        if (!token) window.location.href = 'login.html';
+        app.cargarDatosUsuario_Panel();
+    });
+</script>
+
+<!-- Campo auxiliar -->
+<input type="hidden" id="montoOperacion">
+
 </body>
 </html>
