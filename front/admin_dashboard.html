@@ -85,31 +85,9 @@
             </div>
         </div>
 
-        <!-- SECCIÓN 2: GRÁFICAS -->
-        <div class="row g-3 mb-4">
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <i class="bi bi-graph-up me-2"></i>Transacciones por Minuto
-                    </div>
-                    <div class="card-body">
-                        <canvas id="chartTransactions" height="300"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <i class="bi bi-bar-chart-fill me-2"></i>Volumen Operado (MXN)
-                    </div>
-                    <div class="card-body">
-                        <canvas id="chartVolume" height="300"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
+    
 
-        <!-- SECCIÓN 3: ESTADO DEL SISTEMA -->
+        <!-- SECCIÓN 2: ESTADO DEL SISTEMA -->
         <div class="row g-3 mb-4">
             <div class="col-lg-4">
                 <div class="card">
@@ -179,7 +157,7 @@
             </div>
         </div>
 
-        <!-- SECCIÓN 4: BITÁCORA DE AUDITORÍA -->
+        <!-- SECCIÓN 3: BITÁCORA DE AUDITORÍA -->
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-table me-2"></i>Bitácora de Auditoría en Vivo</span>
@@ -225,55 +203,6 @@
                         </tr>
                     </thead>
                     <tbody id="cuerpoTablaAuditoria">
-                </table>
-            </div>
-        </div>
-
-        <!-- SECCIÓN 5: TABLA DE USUARIOS -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-people me-2"></i>Usuarios Registrados</span>
-                <button class="btn btn-light btn-sm" onclick="app.loadUsersList()">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </button>cargarListaUsuarios
-            </div>
-            
-            <!-- Búsqueda -->
-            <div class="card-body pt-3 pb-0">
-                <div class="row g-2 mb-3">
-                    <div class="col-md-4">
-                        <input type="text" class="form-control form-control-sm" id="usersSearchCurp" 
-                               placeholder="Buscar por CURP..." onkeyup="app.filterUsersList()">
-                    </div>busquedaClaveUsuarios" 
-                               placeholder="Buscar por CURP..." onkeyup="app.filtrarListaUsuarios
-                        <select class="form-select form-select-sm" id="filtroEstadoUsuarios" onchange="app.filtrarListaUsuarios()">
-                            <option value="">Todos los estados</option>
-                            <option value="ACTIVO">Activos</option>
-                            <option value="INACTIVO">Inactivos</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <span class="text-muted small">
-                            Total: <strong id="totalUsuarios">0</strong> usuarios
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabla de Usuarios -->
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-4">CURP</th>
-                            <th>Nombre</th>
-                            <th>Saldo Actual</th>
-                            <th class="text-center">Operaciones</th>
-                            <th>Estado</th>
-                            <th class="pe-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cuerpoTablaUsuarios">
                 </table>
             </div>
         </div>
