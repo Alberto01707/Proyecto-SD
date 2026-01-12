@@ -1,6 +1,5 @@
 /**
- * Aplicación de Sistema Financiero - NEXUS
- * Arquitectura: Cliente (JS) -> GCP Compute Engine (Java) -> Cloud SQL
+ * Aplicación de Sistema Financiero
  */
 
 class AplicacionFinanciera {
