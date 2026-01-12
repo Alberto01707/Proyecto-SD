@@ -34,22 +34,15 @@
             }
         });
 
-        // Cargar monto total desde el backend
         async function cargarMontoTotal() {
             try {
-                // POR HACER: Conectar con el backend
-                // const response = await fetch('http://localhost:8080/api/admin/monto-total');
-                // const data = await response.json();
-                // document.getElementById('montoTotal').textContent = `$${data.monto.toFixed(2)}`;
                 
-                // Datos de ejemplo
                 document.getElementById('montoTotal').textContent = "$1,250,000.00";
             } catch (error) {
                 console.error('Error al cargar monto total:', error);
             }
         }
 
-        // Cargar datos al iniciar
         window.addEventListener('DOMContentLoaded', () => {
             cargarMontoTotal();
         });
