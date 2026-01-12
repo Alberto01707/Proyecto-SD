@@ -9,6 +9,7 @@ class AplicacionFinanciera {
 
         this.urlAuth = `http://${IP_VM}:8081`;           // AuthService
         this.urlTransacciones = `http://${IP_VM}:8080`; // AccountService
+		this.urlAdmin = `http://${IP_VM}:8090`; // AdminService
 
         this.clavToken = 'jwt_token';
         this.clavUsuarioActual = 'usuarioActual';
@@ -369,6 +370,111 @@ class AplicacionFinanciera {
 		contenedor.innerHTML = html;
 	}
 
+	// ================= ADMIN =================
+
+    inicializarPanelAdmin() {
+        this.inicializarGraficas();
+    }
+
+    // Inicialización completa del panel admin (dashboard, auditoría, usuarios)
+    inicializarPanelAdmin_Completo() {
+        this.cargarDashboard();
+        this.cargarTablaAuditoria_Completo();
+        this.loadUsersList();
+    }
+
+    async cargarDashboard() {
+        try {
+            const r = await fetch(`${this.urlAdmin}/admin/dashboard`, {
+                headers: this.auth()
+            });
+            if (!r.ok) throw new Error('Error cargando dashboard');
+            const d = await r.json();
+            const kpiTotal = document.getElementById("kpiTotalMoney");
+            const kpiUsers = document.getElementById("kpiUsers");
+            const kpiTx = document.getElementById("kpiTransactions");
+            if (kpiTotal) kpiTotal.innerText = "$" + Number(d.dinero).toFixed(2);
+            if (kpiUsers) kpiUsers.innerText = d.usuarios;
+            if (kpiTx) kpiTx.innerText = d.transacciones;
+        } catch (err) {
+            console.error('Dashboard error', err);
+        }
+    }
+
+    async cargarTablaAuditoria_Completo() {
+        try {
+            const r = await fetch(`${this.urlAdmin}/admin/auditoria`, {
+                headers: this.auth()
+            });
+            if (!r.ok) throw new Error('Error cargando auditoría');
+            const data = await r.json();
+            const t = document.getElementById("cuerpoTablaAuditoria");
+            if (!t) return;
+            t.innerHTML = "";
+            data.forEach(e => {
+                t.innerHTML += `
+            <tr>
+                <td>${e.t}</td><td>${e.o}</td><td>${e.d}</td>
+                <td>${e.op}</td><td class="text-end">$${Number(e.m).toFixed(2)}</td><td>${e.e}</td>
+            </tr>`;
+            });
+        } catch (err) {
+            console.error('Auditoría error', err);
+        }
+    }
+
+    async loadUsersList() {
+        try {
+            const r = await fetch(`${this.urlAdmin}/admin/usuarios`, {
+                headers: this.auth()
+            });
+            if (!r.ok) throw new Error('Error cargando usuarios');
+            const data = await r.json();
+            const t = document.getElementById("cuerpoTablaUsuarios");
+            if (!t) return;
+            t.innerHTML = "";
+            data.forEach(u => {
+                t.innerHTML += `
+            <tr>
+                <td>${u.curp}</td><td>${u.nombre}</td>
+                <td>$${Number(u.saldo).toFixed(2)}</td><td>-</td><td>${u.estado}</td><td>-</td>
+            </tr>`;
+            });
+        } catch (err) {
+            console.error('Usuarios error', err);
+        }
+    }
+
+    logout() {
+        localStorage.removeItem(this.clavToken);
+        window.location.href = "login.html";
+    }
+
+    auth() {
+        return {
+            'Authorization': 'Bearer ' + localStorage.getItem(this.clavToken)
+        };
+    }
+
+    inicializarGraficas() {
+        const canvas = document.getElementById('graficoTransacciones');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: ['10:00', '10:10', '10:20', '10:30'],
+                datasets: [{
+                    label: 'Actividad del Sistema',
+                    data: [2, 5, 3, 6],
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true }
+        });
+    }
+
 	
 }
 
@@ -379,5 +485,5 @@ const app = new AplicacionFinanciera();
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     if (path.includes('panel_usuario')) app.cargarDatosUsuario_Panel();
-    if (path.includes('admin')) app.inicializarPanelAdmin();
+    if (path.includes('admin')) app.inicializarPanelAdmin_Completo();
 });
