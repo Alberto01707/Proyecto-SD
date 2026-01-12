@@ -1,5 +1,6 @@
 /**
- * Aplicación de Sistema Financiero
+ * Aplicación de Sistema Financiero - NEXUS
+ * Arquitectura: Cliente (JS) -> GCP Compute Engine (Java) -> Cloud SQL
  */
 
 class AplicacionFinanciera {
@@ -44,7 +45,14 @@ class AplicacionFinanciera {
 
             const data = await response.json();
             localStorage.setItem(this.clavToken, data.token);
+			
+			
             localStorage.setItem(this.clavUsuarioActual, curp);
+			
+			if (curp.toUpperCase().startsWith("ADMIN")) {
+				window.location.href = "panel_admin.html";
+				return;
+			}
 
             window.location.href = 'panel_usuario.html';
 
@@ -90,6 +98,12 @@ class AplicacionFinanciera {
 
 			const data = await response.json();
 			if (!response.ok) throw new Error(data.error || "Error al registrar");
+			
+			if (curpRegistro.value.toUpperCase().startsWith("ADMIN")) {
+				mostrarErrorRegistro("Los usuarios ADMIN no pueden registrarse desde esta página.");
+				return;
+			}
+
 
 			alert("Usuario registrado correctamente. Ahora puedes iniciar sesión.");
 			document.querySelector('[data-pestana="ingreso"]').click();
@@ -290,6 +304,72 @@ class AplicacionFinanciera {
 
         modal.show();
     }
+	
+	// ================= HISTORIAL =================
+
+	async cargarHistorialUsuario_Panel() {
+		try {
+			const res = await fetch(`${this.urlTransacciones}/cuenta/historial`, {
+				headers: this.obtenerEncabezadosAutenticacion()
+			});
+
+			if (!res.ok) throw new Error("No se pudo obtener el historial");
+
+			const historial = await res.json();
+			this.renderizarListaTransacciones(historial);
+
+		} catch (error) {
+			console.error(error);
+		}
+	}
+
+	renderizarListaTransacciones(historial) {
+		const contenedor = document.getElementById('listaTransacciones');
+		if (!contenedor) return;
+
+		if (historial.length === 0) {
+			contenedor.innerHTML = `
+				<p class="text-muted text-center">Sin movimientos aún.</p>
+			`;
+			return;
+		}
+
+		let html = `
+			<ul class="list-group">
+		`;
+
+		historial.forEach(tx => {
+
+			let icono = "bi-arrow-left-right text-primary";
+			if (tx.tipo === "DEPOSITO") icono = "bi-arrow-down text-success";
+			if (tx.tipo === "RETIRO") icono = "bi-arrow-up text-danger";
+			if (tx.tipo === "TRANSFERENCIA_SALIENTE") icono = "bi-arrow-right text-warning";
+			if (tx.tipo === "TRANSFERENCIA_ENTRANTE") icono = "bi-arrow-left text-info";
+
+			html += `
+				<li class="list-group-item">
+					<div class="d-flex justify-content-between">
+						<div>
+							<i class="bi ${icono} me-2"></i>
+							<strong>${tx.tipo.replace("_", " ")}</strong>
+							<div class="small text-muted">${tx.fecha}</div>
+						</div>
+						<div class="fw-bold">
+							$${Number(tx.monto).toLocaleString()}
+						</div>
+					</div>
+					<div class="small text-muted">
+						De: ${tx.origen} → Para: ${tx.destino}
+					</div>
+				</li>
+			`;
+		});
+
+		html += `</ul>`;
+		contenedor.innerHTML = html;
+	}
+
+	
 }
 
 // ================= INICIALIZACIÓN =================
