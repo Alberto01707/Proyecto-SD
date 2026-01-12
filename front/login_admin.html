@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus - Tu banca segura | Administrador </title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <canvas id="waveCanvas"></canvas>
+    <div class="auth-container">
+        <div class="auth-wrapper">
+            <!-- LADO IZQUIERDO CON LOGO -->
+            <div class="auth-logo-side">
+                <div class="logo-container">
+                    <img src="img/logo.png" alt="Nexus - Tu banca segura" class="auth-logo">
+                </div>
+            </div>
+
+            <!-- LADO DERECHO CON FORMULARIO -->
+            <div class="auth-card">
+                <!-- Header -->
+                <div class="auth-header">
+                    <h1><i class="bi bi-wallet2"></i> Nexus</h1>
+                    <p>Plataforma de Dinero Electrónico</p>
+                </div>
+
+                <!-- Tabs -->
+                <div class="pestanas-autenticacion">
+                    <button class="pestana-autenticacion activa" data-pestana="ingreso">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar como administrador
+                    </button>
+                    
+                </div>
+
+                <!-- LOGIN TAB -->
+                <div id="pestana-ingreso" class="contenido-pestana-autenticacion activa">
+                    <form id="formularioIngreso" onsubmit="event.preventDefault(); loginAdmin();">
+                        <div class="mb-3">
+                            <label for="curpIngreso" class="form-label">CURP</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                                <input type="text" class="form-control" id="curpIngreso" placeholder="18 caracteres" 
+                                       pattern="[A-Z0-9]{18}" required>
+                            </div>
+                            <small class="form-text text-muted">Formato: ADMIN0123456NNNNNN</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contrasenaIngreso" class="form-label">Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input type="password" class="form-control" id="contrasenaIngreso" placeholder="Ingrese su contraseña" 
+                                       minlength="6" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="app.alternarContrasena('contrasenaIngreso')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="errorIngreso" class="alert alert-danger d-none mb-3" role="alert">
+                            <i class="bi bi-exclamation-circle me-2"></i><span id="msgErrorIngreso"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                            <i class="bi bi-unlock me-2"></i>Ingresar
+                        </button>
+                    </form>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script src="wave-effect.js"></script>
+    <script>
+        // Función para iniciar sesión como administrador.
+        // Valida en cliente que la CURP empiece por 'ADMIN' y muestra errores en el cuadro de error.
+        async function loginAdmin() {
+            const curp = document.getElementById("curpIngreso").value.toUpperCase();
+            const password = document.getElementById("contrasenaIngreso").value;
+            const errorBox = document.getElementById('errorIngreso');
+            const msgError = document.getElementById('msgErrorIngreso');
+
+            // Reset UI
+            if (errorBox) errorBox.classList.add('d-none');
+            if (msgError) msgError.textContent = '';
+
+            // Validación cliente: CURP admin debe empezar por 'ADMIN'
+            if (!curp.startsWith('ADMIN')) {
+                if (msgError) msgError.textContent = 'CURP de administrador debe empezar con "ADMIN".';
+                if (errorBox) errorBox.classList.remove('d-none');
+                return;
+            }
+
+            // Preferir la URL definida en el objeto `app` si está disponible, si no usar localhost.
+            const base = (typeof app !== 'undefined' && app.urlAuth) ? app.urlAuth : 'http://localhost:8081';
+
+            try {
+                const r = await fetch(`${base}/auth/admin/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ curp, password })
+                });
+
+                const d = await r.json();
+                if (d.token) {
+                    // Guardar con la misma clave que usa la app para tokens
+                    localStorage.setItem("jwt_token", d.token);
+                    window.location.href = "admin_dashboard.html";
+                } else {
+                    if (msgError) msgError.textContent = 'Credenciales inválidas';
+                    if (errorBox) errorBox.classList.remove('d-none');
+                }
+            } catch (err) {
+                if (msgError) msgError.textContent = 'Error en la conexión: ' + (err.message || err);
+                if (errorBox) errorBox.classList.remove('d-none');
+            }
+        }
+    </script>
+    <script>
+       
+        document.querySelectorAll('.pestana-autenticacion').forEach(pestana => {
+            pestana.addEventListener('click', function() {
+                const nombrePestana = this.getAttribute('data-pestana');
+                
+                document.querySelectorAll('.pestana-autenticacion').forEach(p => p.classList.remove('activa'));
+                document.querySelectorAll('.contenido-pestana-autenticacion').forEach(c => c.classList.add('d-none'));
+                
+                this.classList.add('activa');
+                document.getElementById('pestana-' + nombrePestana).classList.remove('d-none');
+            });
+        });
+
+        
+    </script>
+</body>
+</html>
