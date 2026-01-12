@@ -17,147 +17,307 @@ public class AccountService {
     private static final String TOPIC_ID = "transacciones-topic";
 
     public static void main(String[] args) throws IOException {
+
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
-        // Endpoint para el Monitor Lanterna (Sin seguridad)
-        server.createContext("/cuenta/deposito", (exchange) -> {
-			manejarCORS(exchange);
-			if ("OPTIONS".equals(exchange.getRequestMethod())) return;
-			if ("POST".equals(exchange.getRequestMethod())) handleDeposito(exchange);
-		});
+        // ================= ENDPOINTS ==================
 
+        server.createContext("/cuenta/deposito", (exchange) -> {
+            manejarCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) return;
+            if ("POST".equals(exchange.getRequestMethod())) handleDeposito(exchange);
+            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+        });
+
+        server.createContext("/cuenta/retiro", (exchange) -> {
+            manejarCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) return;
+            if ("POST".equals(exchange.getRequestMethod())) handleRetiro(exchange);
+            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+        });
 
         server.createContext("/transferir", (exchange) -> {
             manejarCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) return;
             if ("POST".equals(exchange.getRequestMethod())) handleTransfer(exchange);
+            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
         });
 
         server.createContext("/cuenta/saldo", (exchange) -> {
             manejarCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) return;
             if ("GET".equals(exchange.getRequestMethod())) handleBalance(exchange);
+            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
         });
-		
-		server.createContext("/cuenta/deposito", (exchange) -> {
-			manejarCORS(exchange);
-			if ("POST".equals(exchange.getRequestMethod())) handleDeposito(exchange);
-		});
-		
-		server.createContext("/cuenta/retiro", (exchange) -> {
-			manejarCORS(exchange);
-			if ("POST".equals(exchange.getRequestMethod())) handleRetiro(exchange);
-		});
 
+        server.createContext("/cuenta/historial", (exchange) -> {
+            manejarCORS(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) return;
+            if ("GET".equals(exchange.getRequestMethod())) handleHistorial(exchange);
+            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+        });
 
         server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(10));
         server.start();
         System.out.println(">>> AccountService activo en puerto 8080");
     }
 
+    // ====================== HANDLERS ==============================
+
+    private static void handleHistorial(HttpExchange exchange) throws IOException {
+        try {
+            String token = extraerToken(exchange);
+            String curp = validarToken(token);
+
+            String query =
+                "SELECT fecha, origen_curp, destino_curp, monto FROM auditoria " +
+                "WHERE origen_curp = ? OR destino_curp = ? ORDER BY fecha DESC";
+
+            try (Connection conn = DatabaseConnection.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(query)) {
+
+                ps.setString(1, curp);
+                ps.setString(2, curp);
+                ResultSet rs = ps.executeQuery();
+
+                StringBuilder json = new StringBuilder("[");
+                boolean primero = true;
+
+                while (rs.next()) {
+                    if (!primero) json.append(",");
+                    primero = false;
+
+                    String origen = rs.getString("origen_curp");
+                    String destino = rs.getString("destino_curp");
+                    double monto = rs.getDouble("monto");
+                    String fecha = rs.getString("fecha");
+
+                    String tipo;
+                    if (origen.equals("SISTEMA")) tipo = "DEPOSITO";
+                    else if (destino.equals("EFECTIVO")) tipo = "RETIRO";
+                    else if (origen.equals(curp)) tipo = "TRANSFERENCIA_SALIENTE";
+                    else tipo = "TRANSFERENCIA_ENTRANTE";
+
+                    json.append("{")
+                        .append("\"fecha\":\"").append(fecha).append("\",")
+                        .append("\"tipo\":\"").append(tipo).append("\",")
+                        .append("\"origen\":\"").append(origen).append("\",")
+                        .append("\"destino\":\"").append(destino).append("\",")
+                        .append("\"monto\":").append(monto)
+                        .append("}");
+                }
+
+                json.append("]");
+
+                enviarRespuesta(exchange, 200, json.toString());
+            }
+
+        } catch (Exception e) {
+            enviarRespuesta(exchange, 500, "{\"error\":\"Error al obtener historial\"}");
+        }
+    }
+
+
+    // ============================================
+    //  HANDLERS DE LÓGICA
+    // ============================================
+
     private static void handleTransfer(HttpExchange exchange) throws IOException {
-		manejarCORS(exchange);
-		Connection conn = null;
+        Connection conn = null;
 
-		try {
-			String token = extraerToken(exchange);
-			String curpOrigen = validarToken(token);
+        try {
+            String token = extraerToken(exchange);
+            String curpOrigen = validarToken(token);
 
-			String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-			Map<String, String> data = parseJson(body);
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            Map<String, String> data = parseJson(body);
 
-			String curpDestino = data.get("curp_destino");
-			double monto = Double.parseDouble(data.get("monto"));
+            String curpDestino = data.get("curp_destino");
+            double monto = Double.parseDouble(data.get("monto"));
 
-			conn = DatabaseConnection.getConnection();
-			conn.setAutoCommit(false);
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
 
-			double saldoActual = obtenerSaldo(conn, curpOrigen);
-			if (saldoActual < monto) {
-				enviarRespuesta(exchange, 400, "{\"error\":\"Saldo insuficiente\"}");
-				return;
-			}
+            double saldoActual = obtenerSaldo(conn, curpOrigen);
+            if (saldoActual < monto) {
+                enviarRespuesta(exchange, 400, "{\"error\":\"Saldo insuficiente\"}");
+                return;
+            }
 
-			actualizarSaldo(conn, curpOrigen, -monto);
-			actualizarSaldo(conn, curpDestino, monto);
-			conn.commit();
+            actualizarSaldo(conn, curpOrigen, -monto);
+            actualizarSaldo(conn, curpDestino, monto);
+            conn.commit();
 
-			publicarEventoPubSub(curpOrigen, curpDestino, monto);
-			enviarRespuesta(exchange, 200, "{\"mensaje\":\"Transferencia exitosa\"}");
+            publicarEventoPubSub(curpOrigen, curpDestino, monto);
 
-		} catch (Exception e) {
-			try {
-				if (conn != null) conn.rollback();
-			} catch (SQLException ignored) {}
+            enviarRespuesta(exchange, 200, "{\"mensaje\":\"Transferencia exitosa\"}");
 
-			enviarRespuesta(exchange, 500,
-				"{\"error\":\"Error interno en transferencia\"}"
-			);
-
-		} finally {
-			try {
-				if (conn != null) conn.close();
-			} catch (SQLException ignored) {}
-		}
-	}
-
-	private static void handleBalance(HttpExchange exchange) throws IOException {
-		manejarCORS(exchange);
-		try {
-			String token = extraerToken(exchange);
-			String curp = validarToken(token);
-
-			try (Connection conn = DatabaseConnection.getConnection()) {
-				double saldo = obtenerSaldo(conn, curp);
-				enviarRespuesta(exchange, 200,
-					"{\"saldo_monedero\":" + saldo + "}"
-				);
-			}
-		} catch (Exception e) {
-			enviarRespuesta(exchange, 500,
-				"{\"error\":\"Error al obtener saldo\"}"
-			);
-		}
-	}
+        } catch (Exception e) {
+            try { if (conn != null) conn.rollback(); } catch (SQLException ignored) {}
+            enviarRespuesta(exchange, 500, "{\"error\":\"Error interno en transferencia\"}");
+        } finally {
+            try { if (conn != null) conn.close(); } catch (SQLException ignored) {}
+        }
+    }
 
 
-	
+    private static void handleBalance(HttpExchange exchange) throws IOException {
+
+        try {
+            String token = extraerToken(exchange);
+            String curp = validarToken(token);
+
+            try (Connection conn = DatabaseConnection.getConnection()) {
+                double saldo = obtenerSaldo(conn, curp);
+                enviarRespuesta(exchange, 200, "{\"saldo_monedero\":" + saldo + "}");
+            }
+
+        } catch (Exception e) {
+            enviarRespuesta(exchange, 500, "{\"error\":\"Error al obtener saldo\"}");
+        }
+    }
+
+
+    private static void handleDeposito(HttpExchange exchange) throws IOException {
+        Connection conn = null;
+
+        try {
+            String token = extraerToken(exchange);
+            String curp = validarToken(token);
+
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            Map<String, String> data = parseJson(body);
+            double monto = Double.parseDouble(data.get("monto"));
+
+            if (monto <= 0) {
+                enviarRespuesta(exchange, 400, "{\"error\":\"Monto inválido\"}");
+                return;
+            }
+
+            conn = DatabaseConnection.getConnection();
+            actualizarSaldo(conn, curp, monto);
+
+            publicarEventoPubSub("SISTEMA", curp, monto);
+
+            enviarRespuesta(exchange, 200, "{\"mensaje\":\"Depósito exitoso\"}");
+
+        } catch (Exception e) {
+            enviarRespuesta(exchange, 500, "{\"error\":\"Error interno en depósito\"}");
+        } finally {
+            try { if (conn != null) conn.close(); } catch (SQLException ignored) {}
+        }
+    }
+
+
+    private static void handleRetiro(HttpExchange exchange) throws IOException {
+        Connection conn = null;
+
+        try {
+            String token = extraerToken(exchange);
+            String curp = validarToken(token);
+
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            Map<String, String> data = parseJson(body);
+            double monto = Double.parseDouble(data.get("monto"));
+
+            if (monto <= 0) {
+                enviarRespuesta(exchange, 400, "{\"error\":\"Monto inválido\"}");
+                return;
+            }
+
+            conn = DatabaseConnection.getConnection();
+            double saldo = obtenerSaldo(conn, curp);
+
+            if (saldo < monto) {
+                enviarRespuesta(exchange, 400, "{\"error\":\"Saldo insuficiente\"}");
+                return;
+            }
+
+            actualizarSaldo(conn, curp, -monto);
+            publicarEventoPubSub(curp, "EFECTIVO", monto);
+
+            enviarRespuesta(exchange, 200, "{\"mensaje\":\"Retiro exitoso\"}");
+
+        } catch (Exception e) {
+            enviarRespuesta(exchange, 500, "{\"error\":\"Error interno en retiro\"}");
+        } finally {
+            try { if (conn != null) conn.close(); } catch (SQLException ignored) {}
+        }
+    }
+
+
+    // ============================================
+    //  BASE DE DATOS
+    // ============================================
+
     private static double obtenerSaldo(Connection conn, String curp) throws SQLException {
-        PreparedStatement ps = conn.prepareStatement("SELECT saldo FROM cuentas WHERE curp_usuario = ?");
+        PreparedStatement ps = conn.prepareStatement(
+            "SELECT saldo FROM cuentas WHERE curp_usuario = ?"
+        );
         ps.setString(1, curp);
         ResultSet rs = ps.executeQuery();
         return rs.next() ? rs.getDouble("saldo") : 0.0;
     }
 
+
     private static void actualizarSaldo(Connection conn, String curp, double cambio) throws SQLException {
-		PreparedStatement ps = conn.prepareStatement(
-			"UPDATE cuentas SET saldo = saldo + ? WHERE curp_usuario = ?"
-		);
-		ps.setDouble(1, cambio);
-		ps.setString(2, curp);
-		int rows = ps.executeUpdate();
+        PreparedStatement ps = conn.prepareStatement(
+            "UPDATE cuentas SET saldo = saldo + ? WHERE curp_usuario = ?"
+        );
+        ps.setDouble(1, cambio);
+        ps.setString(2, curp);
+        int rows = ps.executeUpdate();
 
-		if (rows == 0) {
-			throw new SQLException("Cuenta no encontrada: " + curp);
-		}
-	}
+        if (rows == 0) throw new SQLException("Cuenta no encontrada: " + curp);
+    }
 
+
+    // ============================================
+    //  PUB/SUB
+    // ============================================
 
     private static void publicarEventoPubSub(String origen, String destino, double monto) {
         try {
             TopicName topicName = TopicName.of(PROJECT_ID, TOPIC_ID);
             Publisher publisher = Publisher.newBuilder(topicName).build();
-            String mensaje = String.format("{\"origen\":\"%s\", \"destino\":\"%s\", \"monto\":%.2f}", origen, destino, monto);
-            PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8(mensaje)).build();
+
+            String mensaje = String.format(
+                "{\"origen\":\"%s\", \"destino\":\"%s\", \"monto\":%.2f}",
+                origen, destino, monto
+            );
+
+            PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
+                    .setData(ByteString.copyFromUtf8(mensaje))
+                    .build();
+
             publisher.publish(pubsubMessage);
             publisher.shutdown();
-        } catch (Exception e) { System.err.println("Error PubSub: " + e.getMessage()); }
+
+        } catch (Exception e) {
+            System.err.println("Error PubSub: " + e.getMessage());
+        }
     }
 
+
+    // ============================================
+    //  CORS - CORRECTO Y ÚNICO
+    // ============================================
     private static void manejarCORS(HttpExchange exchange) throws IOException {
-        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        if ("OPTIONS".equals(exchange.getRequestMethod())) exchange.sendResponseHeaders(204, -1);
+
+        Headers headers = exchange.getResponseHeaders();
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+        }
     }
+
+
+    // ============================================
+    //  AUXILIARES
+    // ============================================
 
     private static String extraerToken(HttpExchange exchange) {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
@@ -166,13 +326,19 @@ public class AccountService {
     }
 
     private static String validarToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(Keys.hmacShaKeyFor(SECRET_KEY.getBytes())).build()
-               .parseClaimsJws(token).getBody().getSubject();
+        return Jwts.parserBuilder()
+                .setSigningKey(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()))
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
     }
 
     private static void enviarRespuesta(HttpExchange exchange, int codigo, String json) throws IOException {
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().add("Content-Type", "application/json");
+
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+
         exchange.sendResponseHeaders(codigo, bytes.length);
         OutputStream os = exchange.getResponseBody();
         os.write(bytes);
@@ -188,81 +354,5 @@ public class AccountService {
         }
         return map;
     }
-	
-	private static void handleDeposito(HttpExchange exchange) throws IOException {
-		manejarCORS(exchange);
-		Connection conn = null;
-
-		try {
-			String token = extraerToken(exchange);
-			String curp = validarToken(token);
-
-			String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-			Map<String, String> data = parseJson(body);
-			double monto = Double.parseDouble(data.get("monto"));
-
-			if (monto <= 0) {
-				enviarRespuesta(exchange, 400, "{\"error\":\"Monto inválido\"}");
-				return;
-			}
-
-			conn = DatabaseConnection.getConnection();
-			actualizarSaldo(conn, curp, monto);
-
-			publicarEventoPubSub("SISTEMA", curp, monto);
-			enviarRespuesta(exchange, 200, "{\"mensaje\":\"Depósito exitoso\"}");
-
-		} catch (Exception e) {
-			enviarRespuesta(exchange, 500,
-				"{\"error\":\"Error interno en depósito\"}"
-			);
-		} finally {
-			try {
-				if (conn != null) conn.close();
-			} catch (SQLException ignored) {}
-		}
-	}
-
-	
-	private static void handleRetiro(HttpExchange exchange) throws IOException {
-		manejarCORS(exchange);
-		Connection conn = null;
-
-		try {
-			String token = extraerToken(exchange);
-			String curp = validarToken(token);
-
-			String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-			Map<String, String> data = parseJson(body);
-			double monto = Double.parseDouble(data.get("monto"));
-
-			if (monto <= 0) {
-				enviarRespuesta(exchange, 400, "{\"error\":\"Monto inválido\"}");
-				return;
-			}
-
-			conn = DatabaseConnection.getConnection();
-			double saldo = obtenerSaldo(conn, curp);
-
-			if (saldo < monto) {
-				enviarRespuesta(exchange, 400, "{\"error\":\"Saldo insuficiente\"}");
-				return;
-			}
-
-			actualizarSaldo(conn, curp, -monto);
-			publicarEventoPubSub(curp, "EFECTIVO", monto);
-
-			enviarRespuesta(exchange, 200, "{\"mensaje\":\"Retiro exitoso\"}");
-
-		} catch (Exception e) {
-			enviarRespuesta(exchange, 500,
-				"{\"error\":\"Error interno en retiro\"}"
-			);
-		} finally {
-			try {
-				if (conn != null) conn.close();
-			} catch (SQLException ignored) {}
-		}
-	}
 
 }
