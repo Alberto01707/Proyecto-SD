@@ -4,65 +4,145 @@ import java.net.InetSocketAddress;
 import java.util.*;
 import java.sql.*;
 import java.nio.charset.StandardCharsets;
+
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
 
+/**
+ * =============================================================================
+ *  CONTADOR GLOBAL DE TRANSACCIONES (Para MonitorLanterna)
+ * =============================================================================
+ */
+class ContadorTransacciones {
+    private static long total = 0;
+
+    public static synchronized void incrementar() {
+        total++;
+    }
+
+    public static synchronized long getTotal() {
+        return total;
+    }
+}
+
+/**
+ * =============================================================================
+ *  ACCOUNT SERVICE
+ * =============================================================================
+ */
 public class AccountService {
-    private static final String SECRET_KEY = "ALB_LECANDA_CONEJO_PROYECTO_SISTEMA_FINANCIERO_2025";
+
+    private static final String SECRET_KEY =
+            "ALB_LECANDA_CONEJO_PROYECTO_SISTEMA_FINANCIERO_2025";
+
     private static final String PROJECT_ID = "sistema-financiero-2025";
     private static final String TOPIC_ID = "transacciones-topic";
+
 
     public static void main(String[] args) throws IOException {
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
-        // ================= ENDPOINTS ==================
+        // =====================================================================
+        // ENDPOINTS
+        // =====================================================================
 
-        server.createContext("/cuenta/deposito", (exchange) -> {
+        server.createContext("/cuenta/deposito", exchange -> {
             manejarCORS(exchange);
+
             if ("OPTIONS".equals(exchange.getRequestMethod())) return;
-            if ("POST".equals(exchange.getRequestMethod())) handleDeposito(exchange);
-            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+
+            if ("POST".equals(exchange.getRequestMethod())) {
+                handleDeposito(exchange);
+                ContadorTransacciones.incrementar();
+            } else {
+                enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+            }
         });
 
-        server.createContext("/cuenta/retiro", (exchange) -> {
+        server.createContext("/cuenta/retiro", exchange -> {
             manejarCORS(exchange);
+
             if ("OPTIONS".equals(exchange.getRequestMethod())) return;
-            if ("POST".equals(exchange.getRequestMethod())) handleRetiro(exchange);
-            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+
+            if ("POST".equals(exchange.getRequestMethod())) {
+                handleRetiro(exchange);
+                ContadorTransacciones.incrementar();
+            } else {
+                enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+            }
         });
 
-        server.createContext("/transferir", (exchange) -> {
+        server.createContext("/transferir", exchange -> {
             manejarCORS(exchange);
+
             if ("OPTIONS".equals(exchange.getRequestMethod())) return;
-            if ("POST".equals(exchange.getRequestMethod())) handleTransfer(exchange);
-            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+
+            if ("POST".equals(exchange.getRequestMethod())) {
+                handleTransfer(exchange);
+                ContadorTransacciones.incrementar();
+            } else {
+                enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+            }
         });
 
-        server.createContext("/cuenta/saldo", (exchange) -> {
+        server.createContext("/cuenta/saldo", exchange -> {
             manejarCORS(exchange);
+
             if ("OPTIONS".equals(exchange.getRequestMethod())) return;
-            if ("GET".equals(exchange.getRequestMethod())) handleBalance(exchange);
-            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+
+            if ("GET".equals(exchange.getRequestMethod())) {
+                handleBalance(exchange);
+            } else {
+                enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+            }
         });
 
-        server.createContext("/cuenta/historial", (exchange) -> {
+        server.createContext("/cuenta/historial", exchange -> {
             manejarCORS(exchange);
+
             if ("OPTIONS".equals(exchange.getRequestMethod())) return;
-            if ("GET".equals(exchange.getRequestMethod())) handleHistorial(exchange);
-            else enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+
+            if ("GET".equals(exchange.getRequestMethod())) {
+                handleHistorial(exchange);
+            } else {
+                enviarRespuesta(exchange, 405, "{\"error\":\"Método no permitido\"}");
+            }
         });
+
+        /**
+         * ======================= ENDPOINT MONITOR ============================
+         */
+        server.createContext("/monitor", exchange -> {
+            manejarCORS(exchange);
+
+            if ("OPTIONS".equals(exchange.getRequestMethod())) return;
+
+            String json = "{"
+                    + "\"ip\":\"" + exchange.getLocalAddress().getHostString() + "\","
+                    + "\"cpu\":" + obtenerUsoCPU() + ","
+                    + "\"transacciones\":" + ContadorTransacciones.getTotal()
+                    + "}";
+
+            enviarRespuesta(exchange, 200, json);
+        });
+
+        // =====================================================================
 
         server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(10));
         server.start();
         System.out.println(">>> AccountService activo en puerto 8080");
     }
 
-    // ====================== HANDLERS ==============================
+
+    // =====================================================================
+    // HANDLERS DE LÓGICA
+    // =====================================================================
 
     private static void handleHistorial(HttpExchange exchange) throws IOException {
         try {
@@ -70,14 +150,15 @@ public class AccountService {
             String curp = validarToken(token);
 
             String query =
-                "SELECT fecha, origen_curp, destino_curp, monto FROM auditoria " +
-                "WHERE origen_curp = ? OR destino_curp = ? ORDER BY fecha DESC";
+                    "SELECT fecha, origen_curp, destino_curp, monto FROM auditoria "
+                    + "WHERE origen_curp = ? OR destino_curp = ? ORDER BY fecha DESC";
 
             try (Connection conn = DatabaseConnection.getConnection();
                  PreparedStatement ps = conn.prepareStatement(query)) {
 
                 ps.setString(1, curp);
                 ps.setString(2, curp);
+
                 ResultSet rs = ps.executeQuery();
 
                 StringBuilder json = new StringBuilder("[");
@@ -99,12 +180,12 @@ public class AccountService {
                     else tipo = "TRANSFERENCIA_ENTRANTE";
 
                     json.append("{")
-                        .append("\"fecha\":\"").append(fecha).append("\",")
-                        .append("\"tipo\":\"").append(tipo).append("\",")
-                        .append("\"origen\":\"").append(origen).append("\",")
-                        .append("\"destino\":\"").append(destino).append("\",")
-                        .append("\"monto\":").append(monto)
-                        .append("}");
+                            .append("\"fecha\":\"").append(fecha).append("\",")
+                            .append("\"tipo\":\"").append(tipo).append("\",")
+                            .append("\"origen\":\"").append(origen).append("\",")
+                            .append("\"destino\":\"").append(destino).append("\",")
+                            .append("\"monto\":").append(monto)
+                            .append("}");
                 }
 
                 json.append("]");
@@ -118,11 +199,8 @@ public class AccountService {
     }
 
 
-    // ============================================
-    //  HANDLERS DE LÓGICA
-    // ============================================
-
     private static void handleTransfer(HttpExchange exchange) throws IOException {
+
         Connection conn = null;
 
         try {
@@ -146,6 +224,7 @@ public class AccountService {
 
             actualizarSaldo(conn, curpOrigen, -monto);
             actualizarSaldo(conn, curpDestino, monto);
+
             conn.commit();
 
             publicarEventoPubSub(curpOrigen, curpDestino, monto);
@@ -179,6 +258,7 @@ public class AccountService {
 
 
     private static void handleDeposito(HttpExchange exchange) throws IOException {
+
         Connection conn = null;
 
         try {
@@ -187,8 +267,8 @@ public class AccountService {
 
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             Map<String, String> data = parseJson(body);
-            double monto = Double.parseDouble(data.get("monto"));
 
+            double monto = Double.parseDouble(data.get("monto"));
             if (monto <= 0) {
                 enviarRespuesta(exchange, 400, "{\"error\":\"Monto inválido\"}");
                 return;
@@ -210,6 +290,7 @@ public class AccountService {
 
 
     private static void handleRetiro(HttpExchange exchange) throws IOException {
+
         Connection conn = null;
 
         try {
@@ -218,22 +299,23 @@ public class AccountService {
 
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             Map<String, String> data = parseJson(body);
-            double monto = Double.parseDouble(data.get("monto"));
 
+            double monto = Double.parseDouble(data.get("monto"));
             if (monto <= 0) {
                 enviarRespuesta(exchange, 400, "{\"error\":\"Monto inválido\"}");
                 return;
             }
 
             conn = DatabaseConnection.getConnection();
-            double saldo = obtenerSaldo(conn, curp);
 
+            double saldo = obtenerSaldo(conn, curp);
             if (saldo < monto) {
                 enviarRespuesta(exchange, 400, "{\"error\":\"Saldo insuficiente\"}");
                 return;
             }
 
             actualizarSaldo(conn, curp, -monto);
+
             publicarEventoPubSub(curp, "EFECTIVO", monto);
 
             enviarRespuesta(exchange, 200, "{\"mensaje\":\"Retiro exitoso\"}");
@@ -243,38 +325,37 @@ public class AccountService {
         } finally {
             try { if (conn != null) conn.close(); } catch (SQLException ignored) {}
         }
+
     }
 
 
-    // ============================================
-    //  BASE DE DATOS
-    // ============================================
+    // =====================================================================
+    // BASE DE DATOS
+    // =====================================================================
 
     private static double obtenerSaldo(Connection conn, String curp) throws SQLException {
         PreparedStatement ps = conn.prepareStatement(
-            "SELECT saldo FROM cuentas WHERE curp_usuario = ?"
-        );
+                "SELECT saldo FROM cuentas WHERE curp_usuario = ?");
         ps.setString(1, curp);
+
         ResultSet rs = ps.executeQuery();
         return rs.next() ? rs.getDouble("saldo") : 0.0;
     }
 
-
     private static void actualizarSaldo(Connection conn, String curp, double cambio) throws SQLException {
         PreparedStatement ps = conn.prepareStatement(
-            "UPDATE cuentas SET saldo = saldo + ? WHERE curp_usuario = ?"
-        );
+                "UPDATE cuentas SET saldo = saldo + ? WHERE curp_usuario = ?");
         ps.setDouble(1, cambio);
         ps.setString(2, curp);
-        int rows = ps.executeUpdate();
 
+        int rows = ps.executeUpdate();
         if (rows == 0) throw new SQLException("Cuenta no encontrada: " + curp);
     }
 
 
-    // ============================================
-    //  PUB/SUB
-    // ============================================
+    // =====================================================================
+    // PUB/SUB
+    // =====================================================================
 
     private static void publicarEventoPubSub(String origen, String destino, double monto) {
         try {
@@ -282,13 +363,13 @@ public class AccountService {
             Publisher publisher = Publisher.newBuilder(topicName).build();
 
             String mensaje = String.format(
-                "{\"origen\":\"%s\", \"destino\":\"%s\", \"monto\":%.2f}",
-                origen, destino, monto
-            );
+                    "{\"origen\":\"%s\", \"destino\":\"%s\", \"monto\":%.2f}",
+                    origen, destino, monto);
 
-            PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                    .setData(ByteString.copyFromUtf8(mensaje))
-                    .build();
+            PubsubMessage pubsubMessage =
+                    PubsubMessage.newBuilder()
+                            .setData(ByteString.copyFromUtf8(mensaje))
+                            .build();
 
             publisher.publish(pubsubMessage);
             publisher.shutdown();
@@ -299,12 +380,13 @@ public class AccountService {
     }
 
 
-    // ============================================
-    //  CORS - CORRECTO Y ÚNICO
-    // ============================================
-    private static void manejarCORS(HttpExchange exchange) throws IOException {
+    // =====================================================================
+    // CORS
+    // =====================================================================
 
+    private static void manejarCORS(HttpExchange exchange) throws IOException {
         Headers headers = exchange.getResponseHeaders();
+
         headers.set("Access-Control-Allow-Origin", "*");
         headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -315,9 +397,9 @@ public class AccountService {
     }
 
 
-    // ============================================
-    //  AUXILIARES
-    // ============================================
+    // =====================================================================
+    // UTILIDADES / AUXILIARES
+    // =====================================================================
 
     private static String extraerToken(HttpExchange exchange) {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
@@ -334,9 +416,10 @@ public class AccountService {
                 .getSubject();
     }
 
-    private static void enviarRespuesta(HttpExchange exchange, int codigo, String json) throws IOException {
-        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+    private static void enviarRespuesta(HttpExchange exchange, int codigo, String json)
+            throws IOException {
 
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
 
         exchange.sendResponseHeaders(codigo, bytes.length);
@@ -347,12 +430,28 @@ public class AccountService {
 
     private static Map<String, String> parseJson(String json) {
         Map<String, String> map = new HashMap<>();
-        String clean = json.trim().replace("{", "").replace("}", "").replace("\"", "");
+
+        String clean = json.trim()
+                .replace("{", "")
+                .replace("}", "")
+                .replace("\"", "");
+
         for (String pair : clean.split(",")) {
             String[] kv = pair.split(":");
-            if (kv.length >= 2) map.put(kv[0].trim(), kv[1].trim());
+            if (kv.length >= 2) {
+                map.put(kv[0].trim(), kv[1].trim());
+            }
         }
+
         return map;
+    }
+
+    private static double obtenerUsoCPU() {
+        com.sun.management.OperatingSystemMXBean os =
+                (com.sun.management.OperatingSystemMXBean)
+                        java.lang.management.ManagementFactory.getOperatingSystemMXBean();
+
+        return os.getSystemCpuLoad() * 100;
     }
 
 }
