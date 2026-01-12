@@ -147,7 +147,7 @@
     <script src="app.js"></script>
     <script src="wave-effect.js"></script>
     <script>
-       
+        // Cambio de pestañas
         document.querySelectorAll('.pestana-autenticacion').forEach(pestana => {
             pestana.addEventListener('click', function() {
                 const nombrePestana = this.getAttribute('data-pestana');
@@ -160,5 +160,14 @@
             });
         });
     </script>
+	<script>
+		const token = localStorage.getItem("token");
+		if (token) {
+			const payload = JSON.parse(atob(token.split(".")[1]));
+			if (payload.sub.startsWith("ADMIN")) {
+				window.location.href = "panel_admin.html";
+			}
+		}
+	</script>
 </body>
 </html>
